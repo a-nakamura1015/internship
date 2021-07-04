@@ -4,29 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    .field {
+    #message {
+      text-align: center;
+      font-size: 80px;
+    }
+    #score {
+      text-align: center;
+      font-size: 60px;
+    }
+    #field {
       margin: auto; /* 中央に表示する */
       border-collapse: collapse; /* 枠線を重ねて表示する */
       border: 2px #000000 solid;
     }
-    .field td {
-      width: 100px;
-      height: 100px;
+    #field td {
+      width: 120px;
+      height: 120px;
       background-color: #3d9400b0;
       border: 2px #000000 solid;
       text-align: center;
-      font-size: 500%;
+      font-size: 80px;
     }
-    .white {
+    .white::before {
       color: #ffffff;
+      content: '●';
     }
-    .black {
+    .black::before {
       color: #000000;
+      content: '●';
+    }
+    .nextPosition {
+      background-color: #FFA500 !important;
     }
   </style>
 </head>
 <body>
-  <table class="field">
+  <div id="message"></div>
+  <div id="score"></div>
+  <table id="field">
     <!-- 1行目 -->
     <tr>
       <td></td>
@@ -65,8 +80,8 @@
       <td></td>
       <td></td>
       <td></td>
-      <td class = "white">●</td>
-      <td class = "black">●</td>
+      <td></td>
+      <td></td>
       <td></td>
       <td></td>
       <td></td>
@@ -76,8 +91,8 @@
       <td></td>
       <td></td>
       <td></td>
-      <td class = "black">●</td>
-      <td class = "white">●</td>
+      <td ></td>
+      <td></td>
       <td></td>
       <td></td>
       <td></td>
@@ -116,5 +131,523 @@
       <td></td>
     </tr>
   </table>
+  <script>
+    let turn;
+    const cells = document.querySelectorAll('#field td');
+    const colors = ['black', 'white'];
+    // フィールドの列数
+    const LINES_COUNT = 8;
+      // フィールドのセルの数
+    const CELLS_COUNT = LINES_COUNT * LINES_COUNT;
+    // Webページが読み込まれた際に実行される
+    window.onload = function() {
+      // ターンを初期化する
+      turn = 0;
+      // フィールドの中央に石を配置する
+      cells[27].classList.add('white');
+      cells[28].classList.add('black');
+      cells[35].classList.add('black');
+      cells[36].classList.add('white');
+      // 各マスをクリックできるようにする
+      for (let index = 0; index < cells.length; index++) {
+        cells[index].addEventListener('click', function() {
+          putStone(index);
+        }, false);
+      }
+      // 次に置けるマスの色を変える
+      // 手前の色
+      const myselfColor = colors[turn % 2];
+      // 相手の色
+      const opponentColor = colors[turn % 2 ^ 1];
+      let canPutAddress = [];
+      for (let i = 0; i < cells.length; i++) {
+        if (canPutStone(i, myselfColor, opponentColor)) {
+          canPutAddress.push(i);
+        }
+      }
+      for (let i = 0; i < canPutAddress.length; i++) {
+        cells[canPutAddress[i]].classList.add('nextPosition');
+      }
+      // 画面にメッセージを表示する
+      viewMessage();
+    }
+    /**
+     * 画面上にメッセージを表示する。
+     */ 
+    function viewMessage() {
+      const colorName = colors[turn % 2];
+      let colorNameJp = '';
+      if (colorName === 'white') {
+        colorNameJp = '白';
+      } else {
+        colorNameJp = '黒';
+      }
+      document.getElementById('message').innerText = `${colorNameJp}のターン`;
+      // 石の数を数える
+      countStone();
+    }
+    /**
+     * 指定の場所に石を置く。
+     * @param {number} index 石を置くアドレス
+     */
+    function putStone(index) {
+      // 手前の色
+      const myselfColor = colors[turn % 2];
+      // 相手の色
+      const opponentColor = colors[turn % 2 ^ 1];
+      // クリックしたマスに石を置けるかを判定する
+      if (!canPutStone(index, myselfColor, opponentColor)) return;
+      for (let i = 0; i < cells.length; i++) {
+        cells[i].classList.remove('nextPosition');
+      }
+      // ターンが奇数回の場合は白の石を、偶数かいの場合は黒の石を置く
+      cells[index].classList.add(colors[turn % 2]);
+      // 石をひっくり返す
+      reverse(index, myselfColor, opponentColor);
+      // 石の数を数える
+      countStone();
+      // 次の石を置けるかを判定する
+      let canPutNextTurn = false;
+      let canPutAddress = [];
+      for (let i = 0; i < cells.length; i++) {
+        if (canPutStone(i, opponentColor, myselfColor)) {
+          canPutAddress.push(i);
+        }
+      }
+      // 次に置けるマスの色を変える
+      for (let i = 0; i < canPutAddress.length; i++) {
+        cells[canPutAddress[i]].classList.add('nextPosition');
+      }
+      // 次のターンに進む
+      turn++;
+      // 画面にメッセージを表示する
+      viewMessage();
+    }
+    /**
+     * 先頭行であることを判定する関数
+     * @param {number} index クリックしたマスのアドレス
+     * @return {boolean} 選択したマスのアドレスが先頭行である場合はtrue、先頭行でない場合はfalse。
+     */
+    function isFirstRow(index) {
+      return index <= LINES_COUNT - 1;
+    }
+    /**
+     * 最終行であることを判定する関数
+     * @param {number} index クリックしたマスのアドレス
+     * @return {boolean} 選択したマスのアドレスが最終行である場合はtrue、最終行でない場合はfalse。
+     */
+    function isLastRow(index) {
+      return index > CELLS_COUNT - 1;
+    }
+    /**
+     * 左端の列であることを判定する関数
+     * @param {number} index クリックしたマスのアドレス
+     * @return {boolean} 選択したマスのアドレスが左端の列である場合はtrue、左端の列でない場合はfalse。
+     */
+    function isLeftMostColumn(index) {
+      return index % LINES_COUNT <= 1;
+    }
+    /**
+     * 右端の列であることを判定する関数
+     * @param {number} index クリックしたマスのアドレス
+     * @return {boolean} 選択したマスのアドレスが右端の列である場合はtrue、右端の列でない場合はfalse。
+     */
+    function isRightMostColumn(index) {
+      return index % 8 === 0;
+    }
+    function canPutStone(index, myselfColor, opponentColor) {
+      if (cells[index].classList.contains(myselfColor) || cells[index].classList.contains(opponentColor)) {
+        // クリックしたマスに石がすでに置かれている場合
+        return false;
+      }
+      
+      // 左上
+      // onsole.log('左上');
+      const topLeftIndex = index - 9;
+      if (!(isFirstRow(topLeftIndex) || isLeftMostColumn(topLeftIndex))) {
+        // 左上のマスが1行目でも１列目でもない場合
+        if (cells[topLeftIndex].classList.contains(opponentColor)) {
+          // 左上のセルが相手の石の場合、そのさきに手前の石があって挟み込むことができるかを判定する。
+          for (let i = topLeftIndex; !isLeftMostColumn(i); i -= 9) {
+            if (!cells[i]) {
+              break;
+            }
+            if (cells[i].classList.length < 1) {
+              // 石がない場合は中断する
+              break;
+            }
+            if (cells[i].classList.contains(myselfColor)) {
+              // 左上のセルが相手の石であり、そのさきに手前の石がある場合
+              return true;
+            }
+          }
+        }
+      }
+      // 真上
+      // console.log('真上');
+      const topIndex = index - 8;
+      if (!(topIndex < 1)) {
+        // 真上のマスがある場合
+        if (cells[topIndex].classList.contains(opponentColor)) {
+          // 真上のマスが相手の石の場合、そのさきに手前の石があって挟み込むことができるかを判定する。
+          for (let i = topIndex; i > 0; i -= 8) {
+            if (!cells[i]) {
+              break;
+            }
+            if (cells[i].classList.length < 1) {
+              // 石がない場合は中断する
+              break;
+            }
+            if (cells[i].classList.contains(myselfColor)) {
+              // 真上にマスがあり、手前の石と挟み込むことができる場合
+              return true;
+            }
+          }
+        }
+      }
+      // 右上
+      // console.log('右上');
+      const topRightIndex = index - 7;
+      if (!(isFirstRow(topRightIndex) || isRightMostColumn(topRightIndex))) {
+        // 右上のマスが1行目でも８列目でもない場合
+        if (cells[topRightIndex].classList.contains(opponentColor)) {
+          // 右上のマスが相手の石の場合、そのさきに手前の石があって挟み込むことができるかを判定する。
+          for (let i = topRightIndex; !isRightMostColumn(i); i -= 7) {
+            if (!cells[i]) {
+              break;
+            }
+            if (cells[i].classList.length < 1) {
+              // 石がない場合は中断する
+              break;
+            }
+            if (cells[i].classList.contains(myselfColor)) {
+              // 右上のマスが相手の石であり、そのさきに手前の石と挟み込むことができる場合
+              return true;
+            }
+          }
+        }
+      }
+      // 左
+      // console.log('左');
+      const leftIndex = index - 1;
+      if (!(isLeftMostColumn(leftIndex))) {
+        // 左のマスが１列目ではない場合
+        if (cells[leftIndex].classList.contains(opponentColor)) {
+          // 左のマスが相手の石である場合、そのさきに手前の石があって挟み込むことができるかを判定する。
+          for (let i = leftIndex; !isLeftMostColumn(leftIndex); i--) {
+            if (!cells[i]) {
+              break;
+            }
+            if (cells[i].classList.length < 1) {
+              // 石がない場合は中断する
+              break;
+            }
+            if (cells[i].classList.contains(myselfColor)) {
+              // 左のマスが相手の石であり、そのさきに手前の石と挟むこむことができる場合
+              return true;
+            }
+          }
+        }
+      }
+      // 右
+      // console.log('右');
+      const rightIndex = index + 1;
+      if (!(isRightMostColumn(rightIndex))) {
+        // 右のマスが８列目ではない場合
+        if (cells[rightIndex].classList.contains(opponentColor)) {
+          // 右のマスが相手の石である場合、そのさきに手前の石があって挟み込むことができるかを判定する。
+          for (let i = rightIndex; !isRightMostColumn(i); i++) {
+            if (!cells[i]) {
+              break;
+            }
+            if (cells[i].classList.length < 1) {
+              // 石がない場合は中断する
+              break;
+            }
+            if (cells[i].classList.contains(myselfColor)) {
+              // 右のマスが相手の石であり、そのさきに手前の石と挟み込むことができる場合
+              return true;
+            }
+          }
+        }
+      }
+      // 左下
+      // console.log('左下');
+      const leftBottomIndex = index + 7;
+      if (!(isLastRow(leftBottomIndex) || isLeftMostColumn(leftBottomIndex))) {
+        // 左下にマスがある場合、または1列目ではない場合
+        if (cells[leftBottomIndex].classList.contains(opponentColor)) {
+          // 左下のマスが相手の石の場合、そのさきの手前の石と挟むことができるかを判定する。
+          for (let i = leftBottomIndex; !isLeftMostColumn(i); i += 7) {
+            if (!cells[i]) {
+              break;
+            }
+            if (cells[i].classList.length < 1) {
+              // 石がない場合は中断する
+              break;
+            }
+            if (cells[i].classList.contains(myselfColor)) {
+              // 左下のマスが相手の石であり、そのさきに手前の石と挟むことができる場合
+              return true;
+            }
+          }
+        }
+      }
+      // 真下
+      // console.log('真下');
+      const bottomIndex = index + 8;
+      if (!(isLastRow(bottomIndex))) {
+        // 真下にマスがある場合
+        if (cells[bottomIndex].classList.contains(opponentColor)) {
+          // 真下のマスが相手の石の場合、そのさきに手前の石があって挟み込むことができるかを判定する。
+          for (let i = bottomIndex; !isLastRow(i); i += 8) {
+            if (!cells[i]) {
+              break;
+            }
+            if (cells[i].classList.length < 1) {
+              // 石がない場合は中断する
+              break;
+            }
+            if (cells[i].classList.contains(myselfColor)) {
+              // 真下にマスがあり、手前の石と挟み込むことができる場合
+              return true;
+            }
+          }
+        }
+      }
+      // 右下
+      // console.log('右下');
+      const rightBottomIndex = index + 9;
+      if (!(isLastRow(rightBottomIndex) || isRightMostColumn(rightBottomIndex))) {
+        // 右下にマスがある場合、または8列目ではない場合
+        if (cells[rightBottomIndex].classList.contains(opponentColor)) {
+          // 右下のマスが相手の石の場合、そのさきに手前の石があって挟み込むことができるかを判定する。
+          for (let i = rightBottomIndex; !isRightMostColumn(i); i += 9) {
+            if (!cells[i]) {
+              break;
+            }
+            if (cells[i].classList.length < 1) {
+              // 石がない場合は中断する
+              break;
+            }
+            if (cells[i].classList.contains(myselfColor)) {
+              // 右下のマスが相手の石であり、そのさきに手前の石があって挟むことができる場合
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+    /**
+     * 石をひっくり返す。
+     * @param {number} index 石を置いたアドレス
+     */
+    function reverse(index, myselfColor, opponentColor) {
+      // 相手の色を自分の色に変える
+      let stones = [];
+      // 置いた石の左斜め上のラインをチェック
+      // console.log('#左上');
+      let leftTopStones = [];
+      for (let address = index - 9; address >= 0; address -= 9) {
+        if (!cells[address]) {
+          break;
+        }
+        if (cells[address].classList.contains(myselfColor)) {
+          // 石の色が手前の色と同じ場合はチェックを終了する
+          break;
+        } else if (cells[address].classList.contains(opponentColor)) {
+          // 石の色が相手の色の場合は変更対象とする
+          leftTopStones.push(address);
+        } else {
+          // 石が置かれていない場合はチェックを終了する
+          leftTopStones = [];
+          break;
+        }
+      }
+      if (leftTopStones.length > 0) stones = stones.concat(leftTopStones);
+
+      // 置いた石の真上のラインをチェック
+      // console.log('#真上');
+      let topStones = [];
+      for (let address = index - LINES_COUNT; address >= 0 && !isLeftMostColumn(address); address -= LINES_COUNT) {
+        if (!cells[address]) {
+          break;
+        }
+        if (cells[address].classList.contains(myselfColor)) {
+          // 石の色が手前の色と同じ場合はチェックを終了する
+          break;
+        } else if (cells[address].classList.contains(opponentColor)) {
+          // 石の色が相手の色の場合は変更対象とする
+          topStones.push(address);
+        } else {
+          // 石が置かれていない場合はチェックを終了する
+          topStones = [];
+          break;
+        }
+      }
+      if (topStones.length > 0) stones = stones.concat(topStones);
+
+      // 置いた石の右斜め上のラインをチェック
+      // console.log('#右上');
+      let rightTopStones = [];
+      for (let address = index - 7; address >= 0 && !isRightMostColumn(address); address -= 7) {
+        if (!cells[address]) {
+          break;
+        }
+        if (cells[address].classList.contains(myselfColor)) {
+          // 石の色が手前の色と同じ場合はチェックを終了する
+          break;
+        } else if (cells[address].classList.contains(opponentColor)) {
+          // 石の色が相手の色の場合は変更対象とする
+          rightTopStones.push(address);
+        } else {
+          // 石が置かれていない場合はチェックを終了する
+          rightTopStones = [];
+          break;
+        }
+      }
+      if (rightTopStones.length > 0) stones = stones.concat(rightTopStones);
+
+      // 置いた石の左のラインをチェック
+      // console.log('#左');
+      let leftStones = [];
+      for (let address = index - 1; !isLeftMostColumn(address); address--) {
+        console.log(address);
+        if (!cells[address]) {
+          break;
+        }
+        if (cells[address].classList.contains(myselfColor)) {
+          // 石の色が手前の色と同じ場合はチェックを終了する
+          break;
+        } else if (cells[address].classList.contains(opponentColor)) {
+          // 石の色が相手の色の場合は変更対象とする
+          leftStones.push(address);
+        } else {
+          // 石が置かれていない場合はチェックを終了する
+          leftStones = [];
+          break;
+        }
+      }
+      if (leftStones.length > 0) stones = stones.concat(leftStones);
+
+      // 置いた石の右のラインをチェック
+      // console.log('#右');
+      let rightStones = [];
+      for (let address = index + 1; !isRightMostColumn(address); address++) {
+        if (!cells[address]) {
+          break;
+        }
+        if (cells[address].classList.contains(myselfColor)) {
+          // 石の色が手前の色と同じ場合はチェックを終了する
+          break;
+        } else if (cells[address].classList.contains(opponentColor)) {
+          // 石の色が相手の色の場合は変更対象とする
+          rightStones.push(address);
+        } else {
+          // 石が置かれていない場合はチェックを終了する
+          rightStones = [];
+          break;
+        }
+      }
+      if (rightStones.length > 0) stones = stones.concat(rightStones);
+
+      // 置いた石の左斜め下のラインをチェック
+      // console.log('#左下');
+      let leftBottomStones = [];
+      for (let address = index + 7; address < CELLS_COUNT || !isLeftMostColumn(address); address += 7) {
+        if (!cells[address]) {
+          leftBottomStones = [];
+          break;
+        }
+        if (cells[address].classList.contains(myselfColor)) {
+          // 石の色が手前の色と同じ場合はチェックを終了する
+          break;
+        } else if (cells[address].classList.contains(opponentColor)) {
+          // 石の色が相手の色の場合は変更対象とする
+          leftBottomStones.push(address);
+        } else {
+          // 石が置かれていない場合はチェックを終了する
+          leftBottomStones = [];
+          break;
+        }
+      }
+      console.log(`leftBottomStones:${leftBottomStones}`);
+      if (leftBottomStones.length > 0) stones = stones.concat(leftBottomStones);
+
+      // 置いた石の真下のラインをチェック
+      // console.log('#真下');
+      let bottomStones = [];
+      for (let address = index + 8; address < CELLS_COUNT; address += 8) {
+        if (!cells[address]) {
+          bottomStones = [];
+          break;
+        }
+        if (cells[address].classList.contains(myselfColor)) {
+          // 石の色が手前の色と同じ場合はチェックを終了する
+          break;
+        } else if (cells[address].classList.contains(opponentColor)) {
+          // 石の色が相手の色の場合は変更対象とする
+          bottomStones.push(address);
+        } else {
+          // 石が置かれていない場合はチェックを終了する
+          bottomStones = [];
+          break;
+        }
+      }
+      console.log(`bottomStones:${bottomStones}`);
+      if (bottomStones.length > 0) stones = stones.concat(bottomStones);
+
+      // 置いた石の右斜め下のラインをチェック
+      // console.log('#右下');
+      let rightBottomStones = [];
+      console.log(`index ${index}`);
+      for (let address = index + 9; address < CELLS_COUNT || !isRightMostColumn(address); address += 9) {
+        console.log(`address ${address}`);
+        if (!cells[address]) {
+          rightBottomStones = [];
+          break;
+        }
+        if (cells[address].classList.contains(myselfColor)) {
+          // 石の色が手前の色と同じ場合はチェックを終了する
+          break;
+        } else if (cells[address].classList.contains(opponentColor)) {
+          // 石の色が相手の色の場合は変更対象とする
+          rightBottomStones.push(address);
+        } else {
+          // 石が置かれていない場合はチェックを終了する
+          rightBottomStones = [];
+          break;
+        }
+      }
+      if (rightBottomStones.length > 0) stones = stones.concat(rightBottomStones);
+
+      console.log(`stones: ${stones}`);
+      // 相手の石を反転させる
+      for (let i = 0; i < stones.length; i++) {
+        cells[stones[i]].classList.remove(opponentColor);
+        cells[stones[i]].classList.add(myselfColor);
+      }
+      console.log('Fin!');
+    }
+    /**
+     * フィールド上の石の数を数えて、その結果を画面に表示する関数。
+     */
+    function countStone() {
+      const counts = {
+        blask: 0,
+        white: 0
+      }
+      cells.forEach(function(cell) {
+        if (cell.classList.contains('black')) {
+          counts.blask++;
+        }
+        if (cell.classList.contains('white')) {
+          counts.white++;
+        }
+      });
+      document.getElementById('score').innerText = `黒：${counts.blask}個　白：${counts.white}個`;
+    }
+  </script>
 </body>
 </html>
