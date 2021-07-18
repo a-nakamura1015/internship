@@ -10,7 +10,7 @@ function doPost(e) {
   }
 
   // Line の応答メッセージ
-  const messeges = [
+  const messages = [
     {
       type: 'text',
       text: event.message.text,
@@ -31,7 +31,7 @@ function doPost(e) {
     // 返信先のメッセージを特定するトークン
     replyToken: replytoken,
     // Line の応答メッセージ
-    messages: messeges,
+    messages: messages,
   };
 
   // HTTP通信で送る内容を文字列にしたもの
