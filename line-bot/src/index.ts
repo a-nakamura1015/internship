@@ -10,12 +10,19 @@ function doPost(e) {
   }
 
   // Line の応答メッセージ
-  const messages = [
-    {
-      type: 'text',
-      text: event.message.text,
-    },
-  ];
+  let messages;
+  if (event.message.text === '今日') {
+    // メッセージが「今日」である場合は、本日のスケジュールを取得して返す
+    messages = getTodaySchedules();
+  } else {
+    // メッセージが「今日」ではない場合は、おうむ返しする
+    messages = [
+      {
+        type: 'text',
+        text: event.message.text,
+      },
+    ];
+  }
 
   // Line の応答メッセージを送信するAPIのURL
   const url = 'https://api.line.me/v2/bot/message/reply';
